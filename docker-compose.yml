@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15-alpine # alpine is slim version, change to postgres:15 if needed
+    image: postgres:15-alpine # alpine is slim version, postgres:15 if needed
     container_name: genomic-postgres
     restart: unless-stopped
 
