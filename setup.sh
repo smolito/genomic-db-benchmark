@@ -11,7 +11,7 @@ DATA_URL="https://bigdataexercise01.blob.core.windows.net/bigdata-exercises-cont
 DATA_DIR="./data"
 FILE_NAME="merged_samples.vcf.gz"
 
-# creates dir if it doesn't exist
+# creates dir IF it doesn't exist
 mkdir -p $DATA_DIR
 
 # check for file
