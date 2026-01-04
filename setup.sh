@@ -52,6 +52,11 @@ else
 fi
 
 echo -e "${GREEN}[5/5] Running Benchmark...${NC}"
+
+# hardcoded queries
 python3 src/benchmark.py --iterations 50 --warmup 5 --output results_$(date +%Y%m%d_%H%M%S).csv
+
+# test queries
+# python3 src/benchmark.py --iterations 50 --warmup 5 --output results_$(date +%Y%m%d_%H%M%S).csv --config "queries/query_config_mixed_test_correct_chr17.json"
 
 echo -e "${GREEN}Hotovo! All done.${NC}"
