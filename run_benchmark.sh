@@ -24,8 +24,6 @@ CONFIG_FILE="queries/query_config_mixed_test_correct_chr17.json"
 
 python3 src/benchmark.py \
     --config "$CONFIG_FILE" \
-    --iterations 50 \
-    --warmup 5 \
     --output "results_chr17_${TIMESTAMP}.csv"
 
 echo -e "${GREEN}Benchmark finished! Results saved to results_chr17_${TIMESTAMP}.csv${NC}"
