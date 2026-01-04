@@ -1,5 +1,6 @@
 data/*.vcf.gz
 data/*.vcf
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
