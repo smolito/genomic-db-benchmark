@@ -1,0 +1,103 @@
+{
+  "description": "Mixed workload - realistic combination of different query types for chr17",
+  "queries": {
+    "Q1": {
+      "description": "Point Lookup (chr17:10736093:A:T)",
+      "method": "q1_variant_by_id",
+      "params": {
+        "chromosome": "chr17",
+        "position": 43041893,
+        "ref": "A",
+        "alt": "T"
+      }
+    },
+    "Q2": {
+      "description": "Position Lookup (chr17:43041893)",
+      "method": "q2_variant_by_position",
+      "params": {
+        "chromosome": "chr17",
+        "position": 43041893
+      }
+    },
+	"Q3": {
+      "description": "Variant by rsID (rs8176192)",
+      "method": "q3_variant_by_rsid",
+      "params": {
+        "rsid": "rs8176192"
+      }
+    },
+    "Q4": {
+      "description": "Gene Variants (SNRPA1P2)",
+      "method": "q4_variants_in_gene_all",
+      "params": {
+        "gene": "BRCA1"
+      }
+    },
+    "Q5": {
+      "description": "Gene Variants Limited (BRCA1, 100)",
+      "method": "q5_variants_in_gene_limited",
+      "params": {
+        "gene": "BRCA1",
+        "limit": 100
+      }
+    },
+    "Q6": {
+      "description": "Small Range 4kb (chr17:43039999-43043999)",
+      "method": "q6_range_small",
+      "params": {
+        "chromosome": "chr17",
+        "start": 43039999,
+        "end": 43043999
+      }
+    },
+    "Q7": {
+      "description": "Medium Range 100kb (chr17:43043999-43143999)",
+      "method": "q7_range_medium",
+      "params": {
+        "chromosome": "chr17",
+        "start": 43043999,
+        "end": 43143999
+      }
+    },
+    "Q8": {
+      "description": "Large Range 1Mb (chr17:43143999-43243999)",
+      "method": "q8_range_large",
+      "params": {
+        "chromosome": "chr17",
+        "start": 43143999,
+        "end": 43243999
+      }
+    },
+    "Q9": {
+      "description": "Transcript Variants (ENST00000497954.1)",
+      "method": "q9_transcript_variants",
+      "params": {
+        "transcript": "ENST00000497954.1"
+      }
+    },
+    "Q10": {
+      "description": "Coding Variants",
+      "method": "q10_coding_variants",
+      "params": {
+        "gene": "BRCA1",
+		"consequences": ["intron_variant"]
+      }
+    },
+    "Q11": {
+      "description": "SEPT5 High Quality (Q>30)",
+      "method": "q11_gene_with_quality",
+      "params": {
+        "gene": "BRCA1",
+        "min_quality": 0.4
+      }
+    },
+    "Q12": {
+      "description": "BRCA1 Rare Variants (AF<0.01)",
+      "method": "q12_gene_rare",
+      "params": {
+        "gene": "BRCA1",
+        "max_af": 0.01
+      }
+    }
+  }
+}

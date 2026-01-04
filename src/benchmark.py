@@ -16,6 +16,7 @@ import statistics
 import argparse
 from datetime import datetime
 from typing import List, Dict, Any, Callable
+from postgres_benchmark import PostgresBenchmark
 
 
 class BenchmarkResult:
@@ -293,9 +294,6 @@ def main():
 
     # Initialize databases
     databases = []
-
-    from postgres_benchmark import PostgresBenchmark
-
     databases.append(PostgresBenchmark())
 
     if not databases:
