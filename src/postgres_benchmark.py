@@ -5,7 +5,7 @@ optimized for network efficiency using server-side aggregation
 
 import psycopg2
 from typing import List
-from benchmark import DatabaseBenchmark
+from base import DatabaseBenchmark  # changed import source
 
 
 class PostgresBenchmark(DatabaseBenchmark):
