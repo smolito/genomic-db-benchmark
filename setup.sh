@@ -4,7 +4,7 @@
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-echo -e "${GREEN}[1/5] Checking available data...${NC}"
+echo -e "${GREEN}[1/4] Checking available data...${NC}"
 
 # data URL
 DATA_URL="https://bigdataexercise01.blob.core.windows.net/bigdata-exercises-container/merged_samples.vcf.gz"
@@ -31,14 +31,14 @@ else
     fi
 fi
 
-echo -e "${GREEN}[2/5] Launching the database from docker-compose...${NC}"
+echo -e "${GREEN}[2/4] Launching the database from docker-compose...${NC}"
 # force recreate to ensure clean state with new schema
 docker-compose up -d --force-recreate
 
-echo -e "${GREEN}[3/5] Installing python dependencies...${NC}"
+echo -e "${GREEN}[3/4] Installing python dependencies...${NC}"
 pip install -r requirements.txt
 
-echo -e "${GREEN}[4/5] Running ETL process (Loading data)...${NC}"
+echo -e "${GREEN}[4/4] Running ETL process (Loading data)...${NC}"
 # wait for postgres to be ready
 echo "Waiting 10s for PostgreSQL to initialize..."
 sleep 10
@@ -51,12 +51,9 @@ else
     exit 1
 fi
 
-echo -e "${GREEN}[5/5] Running Benchmark...${NC}"
+# echo -e "${GREEN}[5/4] Running Benchmark...${NC}"
 
 # hardcoded queries
-python3 src/benchmark.py --iterations 50 --warmup 5 --output results_$(date +%Y%m%d_%H%M%S).csv
+# python3 src/benchmark.py --iterations 50 --warmup 5 --output results_$(date +%Y%m%d_%H%M%S).csv
 
-# test queries
-# python3 src/benchmark.py --iterations 50 --warmup 5 --output results_$(date +%Y%m%d_%H%M%S).csv --config "queries/query_config_mixed_test_correct_chr17.json"
-
-echo -e "${GREEN}Hotovo! All done.${NC}"
+echo -e "${GREEN}Hotovo! All done. Ready to run_benchmark.sh.${NC}"
