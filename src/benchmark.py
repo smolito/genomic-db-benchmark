@@ -63,6 +63,8 @@ class DatabaseBenchmark:
         """Close database connection"""
         raise NotImplementedError
 
+    # PARENT BLUEPRINT QUERIES
+
     # Q1: Lookup by Variant ID (Composite Key)
     def q1_variant_by_id(
         self, chromosome: str, position: int, ref: str, alt: str
@@ -124,43 +126,6 @@ class DatabaseBenchmark:
     def q12_gene_rare(self, gene: str, max_af: float = 0.01) -> int:
         """Q12: Rare/novel variants in gene (gnomAD AF < 0.01)"""
         raise NotImplementedError
-
-
-# =============================================================================
-# Example Database Implementation Template
-# =============================================================================
-# To implement a database benchmark, create a class that inherits from DatabaseBenchmark
-# and implements all the required methods:
-#
-# class MyDatabaseBenchmark(DatabaseBenchmark):
-#     """My custom database benchmark implementation"""
-#
-#     def __init__(self):
-#         super().__init__("MyDatabase")
-#
-#     def connect(self):
-#         # Establish connection to your database
-#         # Example: self.client = my_database.connect(host="localhost", port=1234)
-#         pass
-#
-#     def disconnect(self):
-#         # Close database connection
-#         # if self.client:
-#         #     self.client.close()
-#         pass
-#
-#     def q1_variant_by_id(self, chromosome: str, position: int, ref: str, alt: str) -> int:
-#         # Implement variant lookup by composite key
-#         # Example: results = self.client.query(...)
-#         # return len(results)
-#         raise NotImplementedError
-#
-#     def q2_variant_by_position(self, chromosome: str, position: int) -> int:
-#         # Implement variant lookup by position
-#         raise NotImplementedError
-#
-#     # ... implement all other query methods (q3-q12)
-# =============================================================================
 
 
 def time_query(func: Callable, *args) -> tuple:
