@@ -294,10 +294,9 @@ def main():
     # Initialize databases
     databases = []
 
-    # TODO: Initialize your custom database benchmark implementations here
-    # Example:
-    # from my_database_benchmark import MyDatabaseBenchmark
-    # databases.append(MyDatabaseBenchmark())
+    from postgres_benchmark import PostgresBenchmark
+
+    databases.append(PostgresBenchmark())
 
     if not databases:
         print("No database benchmark implementations available.")
