@@ -4,6 +4,8 @@
 GREEN='\033[0;32m'
 NC='\033[0m'
 
+source .venv/bin/activate
+
 echo -e "${GREEN}[1/4] Checking available data...${NC}"
 
 # data URL
