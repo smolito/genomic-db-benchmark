@@ -1,6 +1,7 @@
 """
 postgresql implementation of the databasebenchmark class
 fetching full records to simulate real application workload
+updates: q9 handles versioned inputs via split_part
 """
 
 import psycopg2
@@ -66,9 +67,10 @@ class PostgresBenchmark(DatabaseBenchmark):
 
     # q3: finding variant by external existing variation id
     def q3_variant_by_rsid(self, rsid: str) -> int:
+        # relies on etl.py correctly extracting rsid from csq or info
         return self._execute_fetchall("SELECT * FROM variants WHERE rsid = %s", (rsid,))
 
-    # q4: all variants in a gene (by symbol)
+    # q4: variants in a gene (by symbol)
     def q4_variants_in_gene_all(self, gene: str) -> int:
         return self._execute_fetchall(
             """
@@ -80,7 +82,7 @@ class PostgresBenchmark(DatabaseBenchmark):
             (gene,),
         )
 
-    # q5: all variants in a gene (by symbol) return first 100
+    # q5: variants in a gene (by symbol) return first 100
     def q5_variants_in_gene_limited(self, gene: str, limit: int = 100) -> int:
         return self._execute_fetchall(
             """
@@ -93,32 +95,49 @@ class PostgresBenchmark(DatabaseBenchmark):
             (gene, limit),
         )
 
-    # q6: all variants in a genomic range - small range
+    # q6: variants in a genomic range - small range
     def q6_range_small(self, chromosome: str, start: int, end: int) -> int:
         return self._execute_fetchall(
             "SELECT * FROM variants WHERE chrom = %s AND pos >= %s AND pos <= %s",
             (chromosome, start, end),
         )
 
-    # q7: all variants in a genomic range - medium range
+    # q7: variants in a genomic range - medium range
     def q7_range_medium(self, chromosome: str, start: int, end: int) -> int:
         return self.q6_range_small(chromosome, start, end)
 
-    # q8: all variants in a genomic range - large range
+    # q8: variants in a genomic range - large range
     def q8_range_large(self, chromosome: str, start: int, end: int) -> int:
         return self.q6_range_small(chromosome, start, end)
 
-    # q9: all variants in a transcript
+    # q9: variants in a transcript
     def q9_transcript_variants(self, transcript: str) -> int:
+        # uses split_part to handle inputs with a transcript version
+        # split part "cuts" everything after a dot
+        # regex approach would have to be through REGEXP_REPLACE(..., '\.[0-9]+$', '')
         return self._execute_fetchall(
             """
             SELECT v.*, a.transcript_id
             FROM variants v
             JOIN annotations a ON v.id = a.variant_id
-            WHERE a.transcript_id = %s
+            WHERE a.transcript_id = SPLIT_PART(%s, '.', 1)
         """,
             (transcript,),
         )
+
+    # strict implementation
+    # checks jsonb for exact version match (precision > recall)
+    # def q9_transcript_variants_strict(self, transcript: str) -> int:
+    #     return self._execute_fetchall(
+    #         """
+    #         SELECT v.*, a.transcript_id
+    #         FROM variants v
+    #         JOIN annotations a ON v.id = a.variant_id
+    #         WHERE a.transcript_id = SPLIT_PART(%s, '.', 1)
+    #         AND v.info::text LIKE %s
+    #         """,
+    #         (transcript, f"%{transcript}%"),
+    #     )
 
     # q10: coding variants in a transcript
     def q10_coding_variants(self, consequences: List[str], gene: str = None) -> int:
@@ -133,7 +152,7 @@ class PostgresBenchmark(DatabaseBenchmark):
             params.append(gene)
         return self._execute_fetchall(sql, tuple(params))
 
-    # q11: all variants in a gene with quality filter
+    # q11: variants in a gene with quality filter
     def q11_gene_with_quality(self, gene: str, min_quality: float) -> int:
         return self._execute_fetchall(
             """
@@ -145,7 +164,7 @@ class PostgresBenchmark(DatabaseBenchmark):
             (gene, min_quality),
         )
 
-    # q12: all variants in a gene - only rare/novel variants
+    # q12: variants in a gene - only rare/novel variants
     def q12_gene_rare(self, gene: str, max_af: float = 0.01) -> int:
         return self._execute_fetchall(
             """

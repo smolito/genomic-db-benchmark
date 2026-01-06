@@ -2,6 +2,7 @@
 """
 etl pipeline for hybrid genomic db
 parses vcf, saves full info to jsonb, extracts key fields to relational tables.
+fixes: rsid extraction from csq, transcript id mapping, header priority.
 """
 
 import os
@@ -59,28 +60,25 @@ def init_schema(conn):
 
 def parse_vep_field(description):
     """
-    Parse vep/csq format string from vcf header.
-    Handles standard VEP 'Format: ...' and SnpEff 'Functional annotations: ...'
+    parse vep/csq format string from vcf header.
     """
     format_str = None
     try:
-        # VEP style
+        # vep style
         if "Format:" in description:
             format_str = description.split("Format:")[1]
-        # SnpEff style
+        # snpeff style
         elif "Functional annotations:" in description:
             format_str = description.split("Functional annotations:")[1]
 
         if format_str:
-            # Clean up quotes and whitespace
             format_str = format_str.strip().strip('"').strip("'").strip()
-            # Split by pipe and strip whitespace from each field
             fields = [f.strip() for f in format_str.split("|")]
             return {field: idx for idx, field in enumerate(fields)}
 
     except Exception as e:
         logger.warning(
-            f"Failed to parse header description: {description} - Error: {e}"
+            f"failed to parse header description: {description} - error: {e}"
         )
     return {}
 
@@ -93,64 +91,75 @@ def process_vcf_and_load(conn):
     logger.info(f"processing vcf file: {VCF_PATH}")
     vcf = cyvcf2.VCF(VCF_PATH)
 
-    # 1. Parse header for CSQ/ANN (relational part)
+    # 1. header parsing strategy: prioritize csq (vep) over ann (snpeff)
     csq_header = None
     header_idx_map = {}
-
-    # 2. Collect all valid INFO keys from header
     info_keys_from_header = []
+
+    # temporary storage to handle priority
+    found_headers = {}
 
     for h in vcf.header_iter():
         if h["HeaderType"] == "INFO":
-            # Store standard INFO keys
             info_keys_from_header.append(h["ID"])
+            if h["ID"] in ["CSQ", "ANN"]:
+                found_headers[h["ID"]] = h["Description"]
 
-            # Check for Annotation header
-            if h["ID"] == "CSQ" or h["ID"] == "ANN":
-                csq_header = h["ID"]
-                header_idx_map = parse_vep_field(h["Description"])
-                logger.info(
-                    f"Found Annotation Header '{csq_header}' with fields: {list(header_idx_map.keys())[:5]}..."
-                )
+    # priority logic: use csq if available, else ann
+    if "CSQ" in found_headers:
+        csq_header = "CSQ"
+        header_idx_map = parse_vep_field(found_headers["CSQ"])
+    elif "ANN" in found_headers:
+        csq_header = "ANN"
+        header_idx_map = parse_vep_field(found_headers["ANN"])
 
     if not csq_header:
-        logger.warning("No CSQ or ANN header found! Annotations table will be empty.")
+        logger.warning("no csq or ann header found! annotations table will be empty.")
+    else:
+        logger.info(f"selected annotation field: {csq_header}")
 
-    # Try to map common field names to what we need
-    keys = header_idx_map.keys()
-
+    # map indices based on the selected header
+    # symbol mapping
     idx_symbol = -1
     for k in ["SYMBOL", "Gene", "gene_name", "GeneName"]:
         if k in header_idx_map:
             idx_symbol = header_idx_map[k]
             break
 
+    # feature/transcript id mapping
+    # note: 'feature' is standard vep for transcript id (enst...), 'feature_id' for snpeff
     idx_feature = -1
-    for k in ["Feature", "Transcript", "transcript_id", "Feature_ID"]:
+    for k in ["Feature", "Feature_ID", "Transcript", "transcript_id"]:
         if k in header_idx_map:
             idx_feature = header_idx_map[k]
             break
 
+    # consequence mapping
     idx_consequence = -1
     for k in ["Consequence", "Annotation", "effect"]:
         if k in header_idx_map:
             idx_consequence = header_idx_map[k]
             break
 
+    # impact mapping
     idx_impact = -1
     for k in ["IMPACT", "Putative_impact", "impact"]:
         if k in header_idx_map:
             idx_impact = header_idx_map[k]
             break
 
-    logger.info(
-        f"Mapped indices - Symbol: {idx_symbol}, Transcript: {idx_feature}, Consequence: {idx_consequence}, Impact: {idx_impact}"
-    )
+    # rsid/existing variation mapping (specific to csq)
+    idx_existing_var = -1
+    if csq_header == "CSQ":
+        for k in ["Existing_variation", "ID", "id"]:
+            if k in header_idx_map:
+                idx_existing_var = header_idx_map[k]
+                break
 
-    if idx_feature == -1 and csq_header:
-        logger.warning(
-            "WARNING: Transcript ID column could not be found in annotation header. Q9 will likely fail!"
-        )
+    logger.info(
+        f"mapped indices -> symbol: {idx_symbol}, transcript: {idx_feature}, "
+        f"consequence: {idx_consequence}, impact: {idx_impact}, existing_var: {idx_existing_var}"
+    )
 
     start_time = time.time()
     variant_buffer = StringIO()
@@ -166,14 +175,13 @@ def process_vcf_and_load(conn):
         if variant.CHROM not in ["17", "chr17", "22", "chr22"]:
             continue
 
-        # --- Base Fields ---
+        # --- base fields ---
         af = variant.INFO.get("AF")
         if isinstance(af, (list, tuple)):
             af = af[0]
         if af is None:
             af = 0.0
 
-        # Capture QUAL
         qual_val = variant.QUAL
         if qual_val is None:
             qual_val_str = "\\N"
@@ -182,38 +190,102 @@ def process_vcf_and_load(conn):
             qual_val_str = str(qual_val)
             qual_json = qual_val
 
-        # --- JSON Construction ---
+        # --- json construction ---
         info_dict = {"orig_qual": qual_json}
-
-        # Populate JSON with typed values
         for key in info_keys_from_header:
             val = variant.INFO.get(key)
             if val is not None:
                 if isinstance(val, tuple):
                     val = list(val)
                 info_dict[key] = val
-
         info_json = json.dumps(info_dict)
 
-        # --- ID / RSID Handling (Fix for Q3) ---
-        # Try standard ID column first
+        # --- annotation parsing & rsid extraction ---
+        csq_val = variant.INFO.get(csq_header)
+        csq_rsid = None
+
+        # parse annotations to buffer (and find rsid if possible)
+        if csq_val:
+            if isinstance(csq_val, tuple):
+                csq_val = ",".join(csq_val)
+
+            transcripts = csq_val.split(",")
+
+            # check the first transcript for rsid if we have the index
+            if idx_existing_var != -1 and len(transcripts) > 0:
+                first_parts = transcripts[0].split("|")
+                if len(first_parts) > idx_existing_var:
+                    raw_vars = first_parts[idx_existing_var]
+                    # existing_variation can be "rs123&COSV456"
+                    if raw_vars:
+                        for v in raw_vars.split("&"):
+                            if v.startswith("rs"):
+                                csq_rsid = v
+                                break
+
+            for t in transcripts:
+                parts = t.split("|")
+
+                symbol = (
+                    parts[idx_symbol].strip()
+                    if idx_symbol != -1
+                    and len(parts) > idx_symbol
+                    and parts[idx_symbol]
+                    else "\\N"
+                )
+
+                # clean transcript id (remove version numbers if desired, e.g., .10)
+                # keeping it raw for now based on schema
+                transcript = (
+                    parts[idx_feature].strip()
+                    if idx_feature != -1
+                    and len(parts) > idx_feature
+                    and parts[idx_feature]
+                    else "\\N"
+                )
+
+                consequence = (
+                    parts[idx_consequence].strip()
+                    if idx_consequence != -1
+                    and len(parts) > idx_consequence
+                    and parts[idx_consequence]
+                    else "\\N"
+                )
+                impact = (
+                    parts[idx_impact].strip()
+                    if idx_impact != -1
+                    and len(parts) > idx_impact
+                    and parts[idx_impact]
+                    else "\\N"
+                )
+
+                if symbol == "\\N" and transcript == "\\N":
+                    continue
+
+                annotation_buffer.write(
+                    f"{current_variant_id}\t{symbol}\t{transcript}\t{consequence}\t{impact}\n"
+                )
+
+        # --- id / rsid resolution ---
+        # 1. try vcf id column
         rsid_val = variant.ID
 
-        # Fallback: check INFO field if ID is missing or dot
+        # 2. fallback to info['rs'] tag (rarely used if csq is present)
         if not rsid_val or rsid_val == ".":
             rsid_val = variant.INFO.get("RS")
-            # If it's a list (multiple RS IDs), take the first one or join them
             if isinstance(rsid_val, (list, tuple)):
                 rsid_val = str(rsid_val[0])
             elif rsid_val is not None:
                 rsid_val = str(rsid_val)
 
-        # Final safety check for database string
+        # 3. fallback to extracted csq rsid
+        if (not rsid_val or rsid_val == ".") and csq_rsid:
+            rsid_val = csq_rsid
+
         if not rsid_val or rsid_val == ".":
             rsid_val = "\\N"
 
-        # prepare variant row
-        # id, chrom, pos, ref, alt, rsid, qual, filter, af, info
+        # --- write variant ---
         row = [
             str(current_variant_id),
             variant.CHROM,
@@ -227,55 +299,6 @@ def process_vcf_and_load(conn):
             info_json,
         ]
         variant_buffer.write("\t".join(row) + "\n")
-
-        # --- Annotations (Relational) ---
-        if csq_header:
-            csq_val = variant.INFO.get(csq_header)
-            if csq_val:
-                if isinstance(csq_val, tuple):
-                    csq_val = ",".join(csq_val)
-
-                transcripts = csq_val.split(",")
-                for t in transcripts:
-                    parts = t.split("|")
-
-                    symbol = (
-                        parts[idx_symbol].strip()
-                        if idx_symbol != -1
-                        and len(parts) > idx_symbol
-                        and parts[idx_symbol]
-                        else "\\N"
-                    )
-                    transcript = (
-                        parts[idx_feature].strip()
-                        if idx_feature != -1
-                        and len(parts) > idx_feature
-                        and parts[idx_feature]
-                        else "\\N"
-                    )
-                    consequence = (
-                        parts[idx_consequence].strip()
-                        if idx_consequence != -1
-                        and len(parts) > idx_consequence
-                        and parts[idx_consequence]
-                        else "\\N"
-                    )
-                    impact = (
-                        parts[idx_impact].strip()
-                        if idx_impact != -1
-                        and len(parts) > idx_impact
-                        and parts[idx_impact]
-                        else "\\N"
-                    )
-
-                    # Skip empty annotations
-                    if symbol == "\\N" and transcript == "\\N":
-                        continue
-
-                    # variant_id, gene_symbol, transcript_id, consequence, impact
-                    annotation_buffer.write(
-                        f"{current_variant_id}\t{symbol}\t{transcript}\t{consequence}\t{impact}\n"
-                    )
 
         current_variant_id += 1
         count += 1
