@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # configuration
 DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
+DB_PORT = os.getenv("DB_PORT", "5478")
 DB_NAME = os.getenv("POSTGRES_DB", "genomics")
 DB_USER = os.getenv("POSTGRES_USER", "postgres")
 DB_PASS = os.getenv("POSTGRES_PASSWORD", "postgres_password")

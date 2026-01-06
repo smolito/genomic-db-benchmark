@@ -18,7 +18,7 @@ services:
       POSTGRES_DB: genomics
 
     ports:
-      - "5432:5432"
+      - "5478:5432"
 
     # volume mapping => db persistence
     # host_path: container_path

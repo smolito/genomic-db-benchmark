@@ -14,7 +14,7 @@ class PostgresBenchmark(DatabaseBenchmark):
     def __init__(
         self,
         host="localhost",
-        port="5432",
+        port="5478",
         dbname="genomics",
         user="postgres",
         password="postgres_password",
