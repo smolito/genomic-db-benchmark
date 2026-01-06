@@ -33,10 +33,10 @@ fi
 
 echo -e "${GREEN}[2/4] Launching the database from docker-compose...${NC}"
 # force recreate to ensure clean state with new schema
-docker-compose up -d --force-recreate
+docker-compose up -d
 
 echo -e "${GREEN}[3/4] Installing python dependencies...${NC}"
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 echo -e "${GREEN}[4/4] Running ETL process (Loading data)...${NC}"
 # wait for postgres to be ready
