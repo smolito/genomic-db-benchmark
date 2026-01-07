@@ -1,0 +1,105 @@
+{
+  "description": "Mixed workload - realistic combination of different query types for chr17 NF1 gene region",
+  "queries": {
+    "Q1": {
+      "description": "Point Lookup (NF1 pathogenic variant chr17:29521683:C:T)",
+      "method": "q1_variant_by_id",
+      "params": {
+        "chromosome": "chr17",
+        "position": 50808384,
+        "ref": "G",
+        "alt": "T"
+      }
+    },
+    "Q2": {
+      "description": "Position Lookup NF1 region (chr17:29521683)",
+      "method": "q2_variant_by_position",
+      "params": {
+        "chromosome": "chr22",
+        "position": 50796346
+      }
+    },
+    "Q3": {
+      "description": "Variant by rsID (NF1 common variant rs11558182)",
+      "method": "q3_variant_by_rsid",
+      "params": {
+        "rsid": "rs8176192"
+      }
+    },
+    "Q4": {
+      "description": "All Variants in NF1 gene",
+      "method": "q4_variants_in_gene_all",
+      "params": {
+        "gene": "NF1"
+      }
+    },
+    "Q5": {
+      "description": "NF1 Variants Limited (100 variants)",
+      "method": "q5_variants_in_gene_limited",
+      "params": {
+        "gene": "NF1",
+        "limit": 100
+      }
+    },
+    "Q6": {
+      "description": "Small Range 4kb NF1 region (chr17:29521600-29525600)",
+      "method": "q6_range_small",
+      "params": {
+        "chromosome": "chr17",
+        "start": 29521600,
+        "end": 29525600
+      }
+    },
+    "Q7": {
+      "description": "Medium Range 100kb NF1 region (chr17:29525600-29625600)",
+      "method": "q7_range_medium",
+      "params": {
+        "chromosome": "chr17",
+        "start": 29525600,
+        "end": 29625600
+      }
+    },
+    "Q8": {
+      "description": "Large Range 1Mb NF1 region (chr17:29625600-29725600)",
+      "method": "q8_range_large",
+      "params": {
+        "chromosome": "chr17",
+        "start": 29625600,
+        "end": 29725600
+      }
+    },
+    "Q9": {
+      "description": "NF1 Canonical Transcript Variants (ENST00000356273.9)",
+      "method": "q9_transcript_variants",
+      "params": {
+        "transcript": "ENST00000356273.9"
+      }
+    },
+    "Q10": {
+      "description": "NF1 Coding Variants (missense variants)",
+      "method": "q10_coding_variants",
+      "params": {
+        "gene": "NF1",
+        "consequences": [
+          "missense_variant"
+        ]
+      }
+    },
+    "Q11": {
+      "description": "NF1 High Quality Variants (Q>30)",
+      "method": "q11_gene_with_quality",
+      "params": {
+        "gene": "NF1",
+        "min_quality": 0.4
+      }
+    },
+    "Q12": {
+      "description": "NF1 Rare Pathogenic Variants (AF<0.001)",
+      "method": "q12_gene_rare",
+      "params": {
+        "gene": "NF1",
+        "max_af": 0.0001
+      }
+    }
+  }
+}

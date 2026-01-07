@@ -20,10 +20,10 @@ fi
 # --iterations: počet opakování (50 je rozumný střed)
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-CONFIG_FILE="queries/query_config_mixed_test_correct_chr17.json"
+CONFIG_FILE="queries/test_BD.json"
 
 python3 src/benchmark.py \
     --config "$CONFIG_FILE" \
-    --output "results_chr17_${TIMESTAMP}.csv"
+    --output "results_test_${TIMESTAMP}.csv"
 
 echo -e "${GREEN}Benchmark finished! Results saved to results_chr17_${TIMESTAMP}.csv${NC}"
